@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>BrokeBot Development Plan</title>
+  <style>
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      color: #1f2937;
+      line-height: 1.45;
+      margin: 44px;
+    }
+    h1, h2, h3 {
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 26px;
+      border-bottom: 2px solid #cbd5e1;
+      padding-bottom: 10px;
+    }
+    h2 {
+      font-size: 19px;
+      margin-top: 26px;
+    }
+    h3 {
+      font-size: 15px;
+      margin-top: 18px;
+    }
+    p {
+      margin: 8px 0 10px;
+    }
+    ul, ol {
+      margin-top: 6px;
+      margin-bottom: 12px;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    .meta {
+      color: #475569;
+      font-size: 13px;
+    }
+    .decision {
+      background: #f8fafc;
+      border-left: 4px solid #2563eb;
+      padding: 10px 12px;
+      margin: 12px 0;
+    }
+    .table-like {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 16px;
+    }
+    .table-like th,
+    .table-like td {
+      border: 1px solid #cbd5e1;
+      padding: 8px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+    .table-like th {
+      background: #e2e8f0;
+    }
+    code {
+      background: #f1f5f9;
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-size: 0.95em;
+    }
+  </style>
+</head>
+<body>
+  <h1>BrokeBot: Unified Full Development Plan</h1>
+  <p class="meta">Prepared on April 9, 2026</p>
+
+  <h2>1. Product Goal</h2>
+  <p>
+    BrokeBot is a personal local-first job search and application assistant built to help you discover,
+    review, tailor, and submit applications quickly without burning money on infrastructure. It should
+    automate the repetitive parts of job hunting while keeping the final high-risk step under your control
+    whenever a platform becomes unpredictable.
+  </p>
+
+  <h2>2. Final Product Decisions</h2>
+  <div class="decision">
+    <strong>Core decisions after merging both plans:</strong>
+    <ul>
+      <li>Use <strong>Node.js</strong> for backend services and automation orchestration.</li>
+      <li>Use <strong>React + Tailwind CSS</strong> for a simple local dashboard.</li>
+      <li>Use <strong>Playwright</strong> for scraping, PDF rendering, and form automation.</li>
+      <li>Use <strong>OpenAI gpt-4o-mini</strong> as the only AI model.</li>
+      <li>Use <strong>SQLite</strong> with <code>better-sqlite3</code> for all persistence.</li>
+      <li>Use a <strong>resume JSON source of truth</strong> to reduce token spend.</li>
+      <li>Generate a <strong>PDF resume as the primary application artifact</strong> using HTML + Playwright.</li>
+      <li>Keep <strong>DOCX export as a later compatibility enhancement</strong>, not a day-one requirement.</li>
+      <li>Run the app locally for a single user only; no auth, no cloud infra, no multi-tenant concerns.</li>
+    </ul>
+  </div>
+
+  <h2>3. Why These Decisions Win</h2>
+  <ul>
+    <li>PDF is the safest default for uploads across LinkedIn, Indeed, Greenhouse, Lever, and most external forms.</li>
+    <li>HTML-to-PDF with Playwright keeps formatting fully under our control and costs nothing per document.</li>
+    <li>Using resume JSON avoids repeated parsing and sharply reduces prompt size.</li>
+    <li><code>gpt-4o-mini</code> gives better extraction and writing quality than the older 3.5 family while still being very cheap.</li>
+    <li>SQLite is enough for a personal automation system and keeps the app portable and inspectable.</li>
+    <li>Pause-before-submit mode protects you from dangerous blind automation on multi-step or unstable external forms.</li>
+  </ul>
+
+  <h2>4. Unified Architecture</h2>
+  <p><strong>Frontend:</strong> React dashboard for settings, queue management, previews, and run status.</p>
+  <p><strong>Backend API:</strong> Express server exposing settings, jobs, application queue, AI generation, and bot execution endpoints.</p>
+  <p><strong>Automation Layer:</strong> Playwright workers for scraping, PDF generation, and apply flows.</p>
+  <p><strong>AI Layer:</strong> Prompt builder + OpenAI client + validation/parsing + token accounting.</p>
+  <p><strong>Database Layer:</strong> SQLite repository functions for jobs, applications, settings, logs, and counters.</p>
+
+  <table class="table-like">
+    <tr>
+      <th>Layer</th>
+      <th>Responsibility</th>
+      <th>Key Output</th>
+    </tr>
+    <tr>
+      <td>React UI</td>
+      <td>Settings, queue review, previews, approvals, metrics</td>
+      <td>Manual control surface</td>
+    </tr>
+    <tr>
+      <td>Express API</td>
+      <td>Business logic, orchestration, DB reads/writes</td>
+      <td>Stable app contract</td>
+    </tr>
+    <tr>
+      <td>AI Service</td>
+      <td>Tailoring bullets, short cover letter, hidden keyword extraction</td>
+      <td>Application JSON package</td>
+    </tr>
+    <tr>
+      <td>Playwright Bot</td>
+      <td>Scrape sites, create PDF, fill applications, pause when needed</td>
+      <td>Ready jobs and application attempts</td>
+    </tr>
+    <tr>
+      <td>SQLite</td>
+      <td>Single source of truth for jobs, settings, logs, usage, queue state</td>
+      <td>Persistent local state</td>
+    </tr>
+  </table>
+
+  <h2>5. Final Feature Scope</h2>
+  <h3>5.1 Resume and Application Package Engine</h3>
+  <ul>
+    <li>User uploads a base resume once.</li>
+    <li>Backend converts the resume into structured JSON and stores it in settings.</li>
+    <li>For each job, the AI generates:
+      <ul>
+        <li>Three tailored bullet rewrites or improvements.</li>
+        <li>A short cover letter with a hard cap.</li>
+        <li>Detected hidden keywords or “humanity check” strings from the JD.</li>
+      </ul>
+    </li>
+    <li>The tailored resume is rendered into HTML and exported to PDF with Playwright.</li>
+    <li>The user can preview resume PDF content and cover letter in the queue before applying.</li>
+  </ul>
+
+  <h3>5.2 Job Discovery and Scraping</h3>
+  <ul>
+    <li>Primary sources: LinkedIn, Indeed, Remote.com.</li>
+    <li>Secondary review-only targets: Amazon, Greenhouse, Lever, other external application pages.</li>
+    <li>Search terms include remote software, full stack, frontend, and technical support variants.</li>
+    <li>Scrapers store title, company, location, posted date, salary text, JD content, apply link, and platform flags.</li>
+    <li>Jobs older than 7 days are skipped immediately to save time and tokens.</li>
+    <li>Remote roles are preferred; onsite roles must pass salary threshold logic or be sent to manual review.</li>
+  </ul>
+
+  <h3>5.3 Review and Apply Flow</h3>
+  <ul>
+    <li>Scraped jobs land in a queue with statuses like <code>new</code>, <code>ready</code>, <code>review_required</code>, <code>skipped</code>, and <code>applied</code>.</li>
+    <li>High-confidence direct-apply flows can be auto-filled.</li>
+    <li>External forms enter pause-before-submit mode so you confirm the final click.</li>
+    <li>A daily limit is enforced using a resettable counter in SQLite.</li>
+    <li>If the result is ambiguous, BrokeBot marks the attempt as <code>uncertain</code> for manual review.</li>
+  </ul>
+
+  <h3>5.4 Alerts and Monitoring</h3>
+  <ul>
+    <li>Dashboard shows jobs found today, jobs ready to apply, applied today, failures, and estimated token spend.</li>
+    <li>Optional CallMeBot WhatsApp notification for high-value or blocked jobs.</li>
+    <li>Console and UI alerts for CAPTCHA, expired session, missing fields, and failed submissions.</li>
+  </ul>
+
+  <h2>6. Prompt Strategy and Token Control</h2>
+  <ul>
+    <li>Store the base resume as compact JSON once and never re-parse unless the resume changes.</li>
+    <li>Clean the JD before sending it to AI:
+      <ul>
+        <li>Strip boilerplate HTML.</li>
+        <li>Remove generic benefits and culture sections where possible.</li>
+        <li>Truncate to a safe size if still too long.</li>
+      </ul>
+    </li>
+    <li>Use one structured AI request per job to return:
+      <ul>
+        <li>Tailored bullet updates</li>
+        <li>Short cover letter</li>
+        <li>Hidden keyword / secret word findings</li>
+        <li>Optional answer hints for common application questions</li>
+      </ul>
+    </li>
+    <li>Require valid JSON response shape and validate it before accepting output.</li>
+    <li>Track prompt and completion tokens per request and aggregate spend in SQLite.</li>
+  </ul>
+
+  <h2>7. Business Rules</h2>
+  <h3>7.1 Date Filter</h3>
+  <ul>
+    <li>If the job was posted more than 7 days ago, skip it immediately.</li>
+    <li>If the platform filter supports “Past 24 hours” or “Past week,” use it before scraping full details.</li>
+  </ul>
+
+  <h3>7.2 Salary and Location Filter</h3>
+  <ul>
+    <li>Remote jobs are allowed by default, subject to role filtering.</li>
+    <li>Onsite jobs are only eligible when salary data is present and passes the configured threshold.</li>
+    <li>If salary is missing for onsite jobs, mark them as review required.</li>
+    <li>If salary currency is unclear, store the raw text and require review.</li>
+    <li>If a range is given, use midpoint logic for threshold comparison.</li>
+  </ul>
+
+  <h3>7.3 Sponsorship Logic</h3>
+  <ul>
+    <li>If location is India: authorized to work = yes; sponsorship required = no.</li>
+    <li>If location is outside India: authorized to work = no; sponsorship required = yes.</li>
+    <li>These defaults must remain editable in settings because some applications phrase the question differently.</li>
+  </ul>
+
+  <h3>7.4 Role Filtering</h3>
+  <ul>
+    <li>Default include terms: software engineer, frontend engineer, full stack engineer, technical support, support engineer.</li>
+    <li>Default skip terms: intern, unpaid, volunteer.</li>
+    <li>Default configurable skip terms: senior, staff, principal, lead.</li>
+  </ul>
+
+  <h3>7.5 Apply Safety Rules</h3>
+  <ul>
+    <li>Hard stop at 50 applications per day by default.</li>
+    <li>Handle at most 5 pages in a multi-step flow; bail on page 6 or beyond.</li>
+    <li>If submission confirmation is not detected, mark the result as uncertain.</li>
+    <li>If CAPTCHA or bot-blocking occurs, pause and notify you rather than forcing retries forever.</li>
+  </ul>
+
+  <h2>8. Proposed Database Schema</h2>
+  <table class="table-like">
+    <tr>
+      <th>Table</th>
+      <th>Purpose</th>
+      <th>Core Fields</th>
+    </tr>
+    <tr>
+      <td><code>jobs</code></td>
+      <td>Scraped jobs and review state</td>
+      <td>id, platform, title, company, location, url, posted_at_raw, posted_at_iso, jd_text, jd_hash, salary_raw, currency_hint, is_remote, is_easy_apply, status, created_at</td>
+    </tr>
+    <tr>
+      <td><code>applications</code></td>
+      <td>Each apply attempt and result</td>
+      <td>id, job_id, tailored_resume_pdf_path, cover_letter_text, hidden_keywords_json, applied_at, status, notes</td>
+    </tr>
+    <tr>
+      <td><code>settings</code></td>
+      <td>Single-user config storage</td>
+      <td>key, value</td>
+    </tr>
+    <tr>
+      <td><code>ai_runs</code></td>
+      <td>Token usage and AI diagnostics</td>
+      <td>id, job_id, model, prompt_tokens, completion_tokens, estimated_cost_usd, status, raw_response, created_at</td>
+    </tr>
+    <tr>
+      <td><code>bot_runs</code></td>
+      <td>Scraper/apply execution logs</td>
+      <td>id, run_type, platform, status, summary, started_at, finished_at</td>
+    </tr>
+    <tr>
+      <td><code>daily_counters</code></td>
+      <td>Rate limiting and daily metrics</td>
+      <td>counter_date, applications_submitted, jobs_found, ai_cost_usd</td>
+    </tr>
+  </table>
+
+  <h2>9. API Surface</h2>
+  <ul>
+    <li><code>GET /api/health</code> for readiness checks.</li>
+    <li><code>GET /api/dashboard</code> for summary counts and spend.</li>
+    <li><code>GET /api/jobs</code> with filters for queue views.</li>
+    <li><code>POST /api/jobs/:id/approve</code> to mark a job ready for application.</li>
+    <li><code>POST /api/jobs/:id/skip</code> to reject a job.</li>
+    <li><code>POST /api/ai/generate/:jobId</code> to generate the tailored package.</li>
+    <li><code>POST /api/apply/:jobId</code> to launch an apply run.</li>
+    <li><code>POST /api/scrape/run</code> to manually trigger scraping.</li>
+    <li><code>GET /api/settings</code> and <code>POST /api/settings</code> for user configuration.</li>
+    <li><code>POST /api/resume/upload</code> for base resume intake.</li>
+  </ul>
+
+  <h2>10. Frontend Scope</h2>
+  <h3>10.1 Dashboard</h3>
+  <ul>
+    <li>Jobs found today</li>
+    <li>Jobs ready to apply</li>
+    <li>Applied today</li>
+    <li>Daily limit progress</li>
+    <li>Estimated AI spend and budget warning when nearing the chosen threshold</li>
+    <li>Bot status cards for scraper and apply engine</li>
+  </ul>
+
+  <h3>10.2 Queue</h3>
+  <ul>
+    <li>Job list with filters by platform, status, remote, salary confidence, and age</li>
+    <li>Job detail pane with JD preview and extracted metadata</li>
+    <li>Tailored resume preview link and cover letter preview</li>
+    <li>Approve, skip, regenerate, and apply actions</li>
+  </ul>
+
+  <h3>10.3 Settings</h3>
+  <ul>
+    <li>OpenAI API key</li>
+    <li>Resume upload and resume JSON preview</li>
+    <li>Role keywords and exclusions</li>
+    <li>Salary threshold</li>
+    <li>Daily application limit</li>
+    <li>Phone number, work authorization, sponsorship defaults</li>
+    <li>LinkedIn and Indeed session status</li>
+    <li>Optional WhatsApp notification settings</li>
+  </ul>
+
+  <h2>11. Automation Flows</h2>
+  <h3>11.1 Scraper Run</h3>
+  <ol>
+    <li>Open saved browser profile or session.</li>
+    <li>Run search queries with date filters first.</li>
+    <li>Collect visible job metadata.</li>
+    <li>Discard jobs older than 7 days.</li>
+    <li>Open candidate jobs and extract JD + salary + apply link.</li>
+    <li>Deduplicate against existing records using URL and content hash strategies.</li>
+    <li>Store jobs with initial review state.</li>
+  </ol>
+
+  <h3>11.2 AI Generation Run</h3>
+  <ol>
+    <li>Fetch base resume JSON and cleaned JD.</li>
+    <li>Send one structured prompt to <code>gpt-4o-mini</code>.</li>
+    <li>Validate the JSON response.</li>
+    <li>Generate HTML resume using tailored bullet content.</li>
+    <li>Render PDF via Playwright.</li>
+    <li>Store outputs and usage metrics.</li>
+  </ol>
+
+  <h3>11.3 Apply Run</h3>
+  <ol>
+    <li>Verify daily limit has not been reached.</li>
+    <li>Open the platform-specific flow.</li>
+    <li>Upload tailored PDF if supported.</li>
+    <li>Fill structured answers from settings and AI output.</li>
+    <li>Handle short cover letter field limits by truncation.</li>
+    <li>Submit automatically only on high-confidence flows.</li>
+    <li>Pause before the final click for risky external forms.</li>
+    <li>Detect confirmation or mark uncertain.</li>
+  </ol>
+
+  <h2>12. Edge Case Hardening</h2>
+  <ul>
+    <li>AI timeout: retry once, then fall back to base resume package and log the failure.</li>
+    <li>Invalid JSON: attempt extraction, then reject the generation if validation still fails.</li>
+    <li>Very long JD: aggressively clean and truncate before calling AI.</li>
+    <li>Expired platform session: trigger re-login guidance and stop the run.</li>
+    <li>CAPTCHA: pause, notify, wait for manual solve, then resume.</li>
+    <li>Already applied job: dedupe by URL plus fuzzy company-title-content hash.</li>
+    <li>Inaccessible JD: mark skipped with reason <code>inaccessible</code>.</li>
+    <li>Missing upload field: continue with text fields if the platform allows it.</li>
+    <li>Rate limit or 429: exponential backoff with capped retries.</li>
+    <li>“Secret word” or hidden prompt test: extract and store it in the application package for later answer filling.</li>
+  </ul>
+
+  <h2>13. Recommended Build Phases</h2>
+  <h3>Phase 1: Foundation</h3>
+  <ul>
+    <li>Create project structure, config management, SQLite schema, migrations, and Express API skeleton.</li>
+    <li>Add settings CRUD and health endpoints.</li>
+    <li>Deliverable: local app boots, DB initializes, settings are editable.</li>
+  </ul>
+
+  <h3>Phase 2: Resume Data and PDF Engine</h3>
+  <ul>
+    <li>Implement base resume ingestion and JSON storage.</li>
+    <li>Build HTML resume template and Playwright PDF generator.</li>
+    <li>Deliverable: generate a polished PDF from stored resume JSON.</li>
+  </ul>
+
+  <h3>Phase 3: AI Package Generator</h3>
+  <ul>
+    <li>Build JD cleaner, prompt builder, OpenAI client, validation, and cost tracking.</li>
+    <li>Deliverable: per-job tailored bullets, short cover letter, hidden keyword extraction, and generated PDF.</li>
+  </ul>
+
+  <h3>Phase 4: React Review UI</h3>
+  <ul>
+    <li>Create Settings, Queue, and Dashboard pages.</li>
+    <li>Deliverable: local control panel for review and operations.</li>
+  </ul>
+
+  <h3>Phase 5: LinkedIn Scraper</h3>
+  <ul>
+    <li>Add saved login session, search automation, date filter, extraction, and dedupe.</li>
+    <li>Deliverable: LinkedIn jobs flowing into SQLite queue.</li>
+  </ul>
+
+  <h3>Phase 6: Indeed and Remote.com Scrapers</h3>
+  <ul>
+    <li>Implement second and third source adapters using the same normalized storage model.</li>
+    <li>Deliverable: multi-source job ingestion.</li>
+  </ul>
+
+  <h3>Phase 7: Apply Bot</h3>
+  <ul>
+    <li>Build LinkedIn Easy Apply, Indeed apply support, and external pause-before-submit flows.</li>
+    <li>Deliverable: controlled semi-automation for applications.</li>
+  </ul>
+
+  <h3>Phase 8: Scheduler, Alerts, and Polish</h3>
+  <ul>
+    <li>Add cron jobs, optional WhatsApp alerts, budget warnings, logs, and retry controls.</li>
+    <li>Deliverable: usable daily driver version.</li>
+  </ul>
+
+  <h2>14. Testing Strategy</h2>
+  <ul>
+    <li>Unit tests for salary parsing, date parsing, JD cleaning, JSON validation, and business rules.</li>
+    <li>Integration tests for database repositories and core API endpoints.</li>
+    <li>Playwright smoke flows against local fixtures before live-site automation.</li>
+    <li>Manual validation runs for LinkedIn and Indeed because live selectors drift often.</li>
+  </ul>
+
+  <h2>15. What Not to Build Yet</h2>
+  <ul>
+    <li>Multi-user auth</li>
+    <li>Cloud sync</li>
+    <li>Public SaaS billing</li>
+    <li>Too many job boards beyond the highest ROI sources</li>
+    <li>Fully blind submission on complex external flows</li>
+    <li>Fancy analytics beyond budget, volume, and queue usefulness</li>
+  </ul>
+
+  <h2>16. First Implementation Slice</h2>
+  <p>
+    The smartest place to begin is the foundation slice: project scaffold, SQLite schema, settings storage,
+    Express API skeleton, and a health-checked local app shell. Once that exists, every later feature has a
+    stable place to land.
+  </p>
+
+  <h2>17. Success Criteria for Version 1</h2>
+  <ul>
+    <li>You can store your resume data, preferences, and API key locally.</li>
+    <li>You can scrape recent jobs from at least one platform into a review queue.</li>
+    <li>You can generate a tailored PDF and short cover letter for a selected job.</li>
+    <li>You can approve a job and launch an apply flow.</li>
+    <li>The bot stops safely on risky flows instead of guessing.</li>
+    <li>You can see daily counts, spend, failures, and uncertain submissions in the dashboard.</li>
+  </ul>
+
+  <h2>18. Recommended Immediate Next Step</h2>
+  <p>
+    Start with Phase 1 only: create the local monorepo structure, initialize SQLite, define the schema,
+    stand up the Express server, and build the settings endpoints. This gives us the foundation to attach
+    the PDF engine, AI package generator, and scrapers without rework.
+  </p>
+</body>
+</html>
