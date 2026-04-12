@@ -4,8 +4,8 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
-    sequence: {
-      concurrent: false,
-    },
+    fileParallelism: false,
+    maxWorkers: 1,
+    minWorkers: 1,
   },
 });

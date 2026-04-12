@@ -9,6 +9,7 @@ import {
   notFoundHandler,
   ok,
 } from "./lib/http.js";
+import { requestIdMiddleware } from "./lib/request-id.js";
 import { dashboardRouter } from "./routes/dashboard.route.js";
 import { healthRouter } from "./routes/health.route.js";
 import { settingsRouter } from "./routes/settings.route.js";
@@ -16,19 +17,24 @@ import { settingsRouter } from "./routes/settings.route.js";
 export function createApp() {
   const app = express();
 
+  app.use(requestIdMiddleware);
   app.use(
     cors({
       origin: env.CORS_ORIGIN,
     }),
   );
   app.use(helmet());
-  app.use(morgan("dev"));
+  app.use(
+    morgan(
+      ":method :url :status :response-time ms - :res[content-length] :req[x-request-id]",
+    ),
+  );
   app.use(express.json({ limit: "1mb" }));
 
   app.get("/", (_req, res) => {
     ok(res, {
       name: "BrokeBot API",
-      version: "phase-1.1",
+      version: "phase-1.2",
     });
   });
 

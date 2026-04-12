@@ -5,8 +5,6 @@ import { db } from "../db/connection.js";
 describe("dashboard routes", () => {
   it("returns zeroed metrics when no data exists", async () => {
     const response = await api.get("/api/dashboard");
-    console.log(response.status);
-    console.log(response.body);
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -19,7 +17,9 @@ describe("dashboard routes", () => {
         todayAiCostUsd: 0,
         totalTrackedAiCostUsd: 0,
       },
+      requestId: response.body.requestId,
     });
+    expect(typeof response.body.requestId).toBe("string");
   });
 
   it("reads daily limit from settings", async () => {
@@ -30,6 +30,7 @@ describe("dashboard routes", () => {
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);
     expect(response.body.data.dailyApplicationLimit).toBe(50);
+    expect(typeof response.body.requestId).toBe("string");
   });
 
   it("aggregates job, application, and ai metrics", async () => {
@@ -83,6 +84,8 @@ describe("dashboard routes", () => {
         todayAiCostUsd: 0.05,
         totalTrackedAiCostUsd: 0.05,
       },
+      requestId: response.body.requestId,
     });
+    expect(typeof response.body.requestId).toBe("string");
   });
 });

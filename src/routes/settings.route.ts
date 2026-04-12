@@ -25,8 +25,17 @@ const jsonValueSchema: z.ZodType<SettingValue> = z.lazy(() =>
   ]),
 );
 
+const settingKeySchema = z
+  .string()
+  .min(1)
+  .max(100)
+  .transform((value) => value.trim())
+  .refine((value) => value.length > 0, {
+    message: "Setting key cannot be empty",
+  });
+
 const settingEntrySchema = z.object({
-  key: z.string().min(1).max(100),
+  key: settingKeySchema,
   value: jsonValueSchema,
 });
 
@@ -40,9 +49,7 @@ settingsRouter.get("/", (_req, res) => {
 });
 
 settingsRouter.get("/:key", (req, res) => {
-  const result = z
-    .object({ key: z.string().min(1).max(100) })
-    .parse(req.params);
+  const result = z.object({ key: settingKeySchema }).parse(req.params);
   const setting = getSettingByKey(result.key);
 
   if (!setting) {

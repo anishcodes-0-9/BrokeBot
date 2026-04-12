@@ -1,11 +1,19 @@
 import { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
 import { ApiSuccessResponse, ApiErrorResponse } from "../types/api.js";
+import { AppError, isSqliteConstraintError } from "./errors.js";
+
+function getRequestId(res: Response): string | undefined {
+  return typeof res.locals.requestId === "string"
+    ? res.locals.requestId
+    : undefined;
+}
 
 export function ok<T>(res: Response, data: T, status = 200): void {
   const body: ApiSuccessResponse<T> = {
     success: true,
     data,
+    requestId: getRequestId(res),
   };
 
   res.status(status).json(body);
@@ -16,6 +24,7 @@ export function created<T>(res: Response, data: T, message?: string): void {
     success: true,
     data,
     ...(message ? { message } : {}),
+    requestId: getRequestId(res),
   };
 
   res.status(201).json(body);
@@ -31,6 +40,7 @@ export function fail(
     success: false,
     error,
     ...(details !== undefined ? { details } : {}),
+    requestId: getRequestId(res),
   };
 
   res.status(status).json(body);
@@ -60,8 +70,18 @@ export function errorHandler(
   res: Response,
   _next: NextFunction,
 ): void {
+  if (error instanceof AppError) {
+    fail(res, error.statusCode, error.message, error.details);
+    return;
+  }
+
   if (error instanceof ZodError) {
     fail(res, 400, "Validation failed", error.flatten());
+    return;
+  }
+
+  if (isSqliteConstraintError(error)) {
+    fail(res, 409, "Database constraint violation");
     return;
   }
 

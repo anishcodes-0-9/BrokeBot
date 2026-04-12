@@ -9,12 +9,14 @@ process.env.DATABASE_PATH = "./data/brokebot.test.db";
 process.env.PORT = "4000";
 process.env.CORS_ORIGIN = "http://localhost:5173";
 
-import { createApp } from "../app.js";
-import { db } from "../db/connection.js";
-import { upsertSettings } from "../repos/settings.repo.js";
-
 const schemaPath = path.resolve(process.cwd(), "src/db/schema.sql");
 const schemaSql = fs.readFileSync(schemaPath, "utf8");
+
+const { createApp } = await import("../app.js");
+const { db } = await import("../db/connection.js");
+const { upsertSettings } = await import("../repos/settings.repo.js");
+
+export { db };
 
 export const app = createApp();
 export const api = request(app);
