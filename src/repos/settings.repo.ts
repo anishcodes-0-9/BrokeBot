@@ -86,7 +86,7 @@ export function getSettingByKey(key: string): SettingRecord | null {
 
 export function upsertSettings(
   entries: Array<{ key: string; value: SettingValue }>,
-): void {
+): number {
   const transaction = db.transaction(
     (items: Array<{ key: string; value: SettingValue }>) => {
       for (const item of items) {
@@ -95,8 +95,10 @@ export function upsertSettings(
           value: serializeValue(item.value),
         });
       }
+
+      return items.length;
     },
   );
 
-  transaction(entries);
+  return transaction(entries);
 }

@@ -6,6 +6,7 @@ import {
   upsertSettings,
   type SettingValue,
 } from "../repos/settings.repo.js";
+import { created, fail, ok } from "../lib/http.js";
 
 export const settingsRouter = Router();
 
@@ -25,48 +26,42 @@ const jsonValueSchema: z.ZodType<SettingValue> = z.lazy(() =>
 );
 
 const settingEntrySchema = z.object({
-  key: z.string().min(1),
+  key: z.string().min(1).max(100),
   value: jsonValueSchema,
 });
 
 const upsertSettingsSchema = z.object({
-  settings: z.array(settingEntrySchema).min(1),
+  settings: z.array(settingEntrySchema).min(1).max(100),
 });
 
 settingsRouter.get("/", (_req, res) => {
   const settings = getAllSettings();
-
-  res.json({
-    success: true,
-    data: settings,
-  });
+  ok(res, settings);
 });
 
 settingsRouter.get("/:key", (req, res) => {
-  const result = z.object({ key: z.string().min(1) }).parse(req.params);
+  const result = z
+    .object({ key: z.string().min(1).max(100) })
+    .parse(req.params);
   const setting = getSettingByKey(result.key);
 
   if (!setting) {
-    res.status(404).json({
-      success: false,
-      error: `Setting '${result.key}' not found`,
-    });
+    fail(res, 404, `Setting '${result.key}' not found`);
     return;
   }
 
-  res.json({
-    success: true,
-    data: setting,
-  });
+  ok(res, setting);
 });
 
 settingsRouter.post("/", (req, res) => {
   const payload = upsertSettingsSchema.parse(req.body);
+  const savedCount = upsertSettings(payload.settings);
 
-  upsertSettings(payload.settings);
-
-  res.status(201).json({
-    success: true,
-    message: "Settings saved",
-  });
+  created(
+    res,
+    {
+      savedCount,
+    },
+    "Settings saved",
+  );
 });

@@ -1,11 +1,57 @@
-import { ZodError } from "zod";
 import { Request, Response, NextFunction } from "express";
+import { ZodError } from "zod";
+import { ApiSuccessResponse, ApiErrorResponse } from "../types/api.js";
+
+export function ok<T>(res: Response, data: T, status = 200): void {
+  const body: ApiSuccessResponse<T> = {
+    success: true,
+    data,
+  };
+
+  res.status(status).json(body);
+}
+
+export function created<T>(res: Response, data: T, message?: string): void {
+  const body: ApiSuccessResponse<T> = {
+    success: true,
+    data,
+    ...(message ? { message } : {}),
+  };
+
+  res.status(201).json(body);
+}
+
+export function fail(
+  res: Response,
+  status: number,
+  error: string,
+  details?: unknown,
+): void {
+  const body: ApiErrorResponse = {
+    success: false,
+    error,
+    ...(details !== undefined ? { details } : {}),
+  };
+
+  res.status(status).json(body);
+}
+
+export function jsonSyntaxErrorHandler(
+  error: unknown,
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (error instanceof SyntaxError && "body" in error) {
+    fail(res, 400, "Malformed JSON body");
+    return;
+  }
+
+  next(error);
+}
 
 export function notFoundHandler(_req: Request, res: Response): void {
-  res.status(404).json({
-    success: false,
-    error: "Route not found",
-  });
+  fail(res, 404, "Route not found");
 }
 
 export function errorHandler(
@@ -15,24 +61,14 @@ export function errorHandler(
   _next: NextFunction,
 ): void {
   if (error instanceof ZodError) {
-    res.status(400).json({
-      success: false,
-      error: "Validation failed",
-      details: error.flatten(),
-    });
+    fail(res, 400, "Validation failed", error.flatten());
     return;
   }
 
   if (error instanceof Error) {
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+    fail(res, 500, error.message);
     return;
   }
 
-  res.status(500).json({
-    success: false,
-    error: "Unknown server error",
-  });
+  fail(res, 500, "Unknown server error");
 }

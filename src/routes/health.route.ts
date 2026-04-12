@@ -1,14 +1,12 @@
 import { Router } from "express";
+import { ok } from "../lib/http.js";
 
 export const healthRouter = Router();
 
 healthRouter.get("/", (_req, res) => {
-  res.json({
-    success: true,
-    data: {
-      status: "ok",
-      service: "brokebot-api",
-      timestamp: new Date().toISOString(),
-    },
+  ok(res, {
+    status: "ok",
+    service: "brokebot-api",
+    timestamp: new Date().toISOString(),
   });
 });
