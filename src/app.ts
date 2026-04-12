@@ -12,6 +12,7 @@ import {
 import { requestIdMiddleware } from "./lib/request-id.js";
 import { dashboardRouter } from "./routes/dashboard.route.js";
 import { healthRouter } from "./routes/health.route.js";
+import { resumeRouter } from "./routes/resume.route.js";
 import { settingsRouter } from "./routes/settings.route.js";
 
 export function createApp() {
@@ -34,13 +35,14 @@ export function createApp() {
   app.get("/", (_req, res) => {
     ok(res, {
       name: "BrokeBot API",
-      version: "phase-1.2",
+      version: "phase-2.1",
     });
   });
 
   app.use("/api/health", healthRouter);
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api/settings", settingsRouter);
+  app.use("/api/resume", resumeRouter);
 
   app.use(jsonSyntaxErrorHandler);
   app.use(notFoundHandler);
