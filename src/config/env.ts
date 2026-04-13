@@ -10,6 +10,7 @@ const envSchema = z.object({
     .default("development"),
   DATABASE_PATH: z.string().min(1).default("./data/brokebot.db"),
   CORS_ORIGIN: z.string().min(1).default("http://localhost:5173"),
+  OPENAI_API_KEY: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
