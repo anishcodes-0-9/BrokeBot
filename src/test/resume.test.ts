@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { api } from "./helpers.js";
 
@@ -109,6 +110,33 @@ describe("resume routes", () => {
     expect(response.body.data.educationCount).toBe(1);
     expect(response.body.data.skillGroupCount).toBe(2);
     expect(typeof response.body.data.updatedAt).toBe("string");
+  });
+
+  it("generates a resume pdf from the saved base resume", async () => {
+    await api.post("/api/resume").send(validResumePayload);
+
+    const response = await api.post("/api/resume/pdf").send({
+      fileNamePrefix: "anish-resume",
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body.success).toBe(true);
+    expect(response.body.message).toBe("Resume PDF generated");
+    expect(response.body.data.fileName).toMatch(/^anish-resume-.*\.pdf$/);
+    expect(response.body.data.relativePath).toContain(
+      "data/generated/resumes/",
+    );
+    expect(fs.existsSync(response.body.data.absolutePath)).toBe(true);
+  });
+
+  it("returns 404 when generating a pdf without a stored resume", async () => {
+    const response = await api.post("/api/resume/pdf").send({
+      fileNamePrefix: "anish-resume",
+    });
+
+    expect(response.status).toBe(404);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error).toBe("Base resume not found");
   });
 
   it("rejects invalid resume payloads", async () => {

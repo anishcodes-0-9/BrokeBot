@@ -3,10 +3,23 @@ import { z } from "zod";
 import { created, fail, ok } from "../lib/http.js";
 import { resumeSchema } from "../schemas/resume.schema.js";
 import { getSettingByKey, upsertSettings } from "../repos/settings.repo.js";
+import { generateResumePdf } from "../services/resume-pdf.service.js";
 
 export const resumeRouter = Router();
 
 const resumeSettingKey = "baseResume";
+
+const pdfRequestSchema = z
+  .object({
+    fileNamePrefix: z
+      .string()
+      .trim()
+      .min(1)
+      .max(80)
+      .regex(/^[a-zA-Z0-9-_]+$/)
+      .optional(),
+  })
+  .optional();
 
 resumeRouter.get("/", (_req, res) => {
   const setting = getSettingByKey(resumeSettingKey);
@@ -57,6 +70,24 @@ resumeRouter.get("/meta", (_req, res) => {
     skillGroupCount: parsed.skills.length,
     updatedAt: setting.updatedAt,
   });
+});
+
+resumeRouter.post("/pdf", async (req, res) => {
+  const parsedRequest = pdfRequestSchema.parse(req.body ?? {});
+  const setting = getSettingByKey(resumeSettingKey);
+
+  if (!setting) {
+    fail(res, 404, "Base resume not found");
+    return;
+  }
+
+  const resume = resumeSchema.parse(setting.value);
+  const generated = await generateResumePdf(
+    resume,
+    parsedRequest?.fileNamePrefix,
+  );
+
+  created(res, generated, "Resume PDF generated");
 });
 
 resumeRouter.delete("/", (_req, res) => {
