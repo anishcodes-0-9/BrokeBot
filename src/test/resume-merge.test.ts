@@ -9,7 +9,12 @@ const baseResume = {
     location: "Kochi, India",
   },
   summary: "Base summary",
-  skills: [],
+  skills: [
+    {
+      category: "Frontend",
+      items: ["React", "TypeScript", "React"],
+    },
+  ],
   experience: [
     {
       company: "Acme Tech",
@@ -24,7 +29,7 @@ const baseResume = {
 };
 
 describe("resume merge", () => {
-  it("replaces summary and matched experience bullets", () => {
+  it("replaces summary and merges matched experience bullets", () => {
     const merged = mergeResumeWithAiOutput(baseResume, {
       summary: "Tailored summary",
       coverLetter: "Short letter",
@@ -45,6 +50,18 @@ describe("resume merge", () => {
     expect(merged.experience[0].bullets).toEqual([
       "Tailored bullet 1",
       "Tailored bullet 2",
+      "Original bullet 3",
     ]);
+  });
+
+  it("deduplicates skill items", () => {
+    const merged = mergeResumeWithAiOutput(baseResume, {
+      summary: "Tailored summary",
+      coverLetter: "Short letter",
+      hiddenKeywords: ["react"],
+      tailoredExperience: [],
+    });
+
+    expect(merged.skills[0].items).toEqual(["React", "TypeScript"]);
   });
 });

@@ -5,6 +5,7 @@ import { mergeResumeWithAiOutput } from "../lib/resume-merge.js";
 import { getSettingByKey } from "../repos/settings.repo.js";
 import { applicationPackageRequestSchema } from "../schemas/application-package.schema.js";
 import { resumeSchema } from "../schemas/resume.schema.js";
+import { generateCoverLetterDocx } from "../services/cover-letter-docx.service.js";
 import { generateApplicationPackage } from "../services/openai.service.js";
 import { generateResumeDocxAndPdf } from "../services/resume-docx.service.js";
 import { buildGeneratedPaths, slugify } from "../utils/file.js";
@@ -35,12 +36,22 @@ applicationPackageRouter.post("/generate", async (req, res) => {
     prefix,
   );
 
-  const coverLetterFileName = `${prefix}-cover-letter.txt`;
-  const coverLetterPaths = buildGeneratedPaths(
+  const coverLetterTextFileName = `${prefix}-cover-letter.txt`;
+  const coverLetterTextPaths = buildGeneratedPaths(
     "cover-letters",
-    coverLetterFileName,
+    coverLetterTextFileName,
   );
-  fs.writeFileSync(coverLetterPaths.absolutePath, aiResult.coverLetter, "utf8");
+  fs.writeFileSync(
+    coverLetterTextPaths.absolutePath,
+    aiResult.coverLetter,
+    "utf8",
+  );
+
+  const coverLetterDocx = await generateCoverLetterDocx(
+    aiResult.coverLetter,
+    baseResume.basics.fullName,
+    `${prefix}-cover-letter`,
+  );
 
   created(
     res,
@@ -49,9 +60,10 @@ applicationPackageRouter.post("/generate", async (req, res) => {
       resumePdf: generatedResume.pdf,
       coverLetter: {
         text: aiResult.coverLetter,
-        fileName: coverLetterFileName,
-        absolutePath: coverLetterPaths.absolutePath,
-        relativePath: coverLetterPaths.relativePath,
+        txtFileName: coverLetterTextFileName,
+        txtAbsolutePath: coverLetterTextPaths.absolutePath,
+        txtRelativePath: coverLetterTextPaths.relativePath,
+        docx: coverLetterDocx,
         generatedAt: new Date().toISOString(),
       },
       preview: {

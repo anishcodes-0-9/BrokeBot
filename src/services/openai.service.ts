@@ -31,22 +31,48 @@ function extractJson(raw: string): string {
   return raw.slice(start, end + 1);
 }
 
+function getPortfolioLink(resume: ResumeData): string {
+  return (
+    resume.basics.portfolio ||
+    resume.basics.website ||
+    resume.basics.github ||
+    resume.basics.linkedin ||
+    ""
+  );
+}
+
+function ensureBriefCoverLetter(text: string, portfolioLink: string): string {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  let result = words.slice(0, 220).join(" ").trim();
+
+  if (portfolioLink && !result.includes(portfolioLink)) {
+    result = `${result} Portfolio: ${portfolioLink}`.trim();
+  }
+
+  return result;
+}
+
 export async function generateApplicationPackage(
   resume: ResumeData,
   job: JobDescriptionInput,
 ): Promise<GeneratedApplicationPackage> {
   if (env.NODE_ENV === "test") {
+    const portfolioLink = getPortfolioLink(resume);
+
     return {
-      summary: "Tailored frontend engineer summary for the target role.",
-      coverLetter:
-        "I am excited to apply for this role. My background in React, TypeScript, and Node.js aligns well with the requirements, and I would be glad to contribute quickly.",
-      hiddenKeywords: ["react", "typescript"],
+      summary:
+        "Frontend engineer with 4+ years of experience building performant, ATS-friendly React and TypeScript interfaces.",
+      coverLetter: ensureBriefCoverLetter(
+        `I’m applying for this role because it aligns well with my experience building user-facing React and TypeScript applications with strong execution and product focus. I’ve shipped production-ready interfaces, improved workflow performance, and collaborated closely to deliver practical outcomes. ${portfolioLink ? `You can view my work here: ${portfolioLink}` : ""}`,
+        portfolioLink,
+      ),
+      hiddenKeywords: ["react", "typescript", "banana"],
       tailoredExperience: resume.experience.map((entry) => ({
         company: entry.company,
         title: entry.title,
-        tailoredBullets: entry.bullets.slice(0, 2).map((bullet) => ({
+        tailoredBullets: entry.bullets.slice(0, 3).map((bullet) => ({
           original: bullet,
-          tailored: `${bullet} Tailored to the job requirements.`,
+          tailored: `${bullet} Aligned to ATS keywords, frontend impact, and measurable execution.`,
         })),
       })),
     };
@@ -72,5 +98,19 @@ export async function generateApplicationPackage(
   }
 
   const parsed = JSON.parse(extractJson(rawOutput));
-  return applicationPackageSchema.parse(parsed);
+  const validated = applicationPackageSchema.parse(parsed);
+  const portfolioLink = getPortfolioLink(resume);
+
+  return {
+    ...validated,
+    summary: validated.summary.trim(),
+    coverLetter: ensureBriefCoverLetter(validated.coverLetter, portfolioLink),
+    hiddenKeywords: Array.from(
+      new Set(
+        validated.hiddenKeywords
+          .map((keyword) => keyword.trim())
+          .filter(Boolean),
+      ),
+    ),
+  };
 }

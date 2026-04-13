@@ -9,7 +9,7 @@ describe("health routes", () => {
     expect(response.body.success).toBe(true);
     expect(response.body.data).toEqual({
       name: "BrokeBot API",
-      version: "phase-4.1",
+      version: "phase-4.2",
     });
 
     expect(typeof response.body.requestId).toBe("string");

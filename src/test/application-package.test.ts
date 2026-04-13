@@ -95,10 +95,16 @@ describe("application package routes", () => {
       true,
     );
     expect(fs.existsSync(response.body.data.resumePdf.absolutePath)).toBe(true);
-    expect(fs.existsSync(response.body.data.coverLetter.absolutePath)).toBe(
+    expect(fs.existsSync(response.body.data.coverLetter.txtAbsolutePath)).toBe(
       true,
     );
+    expect(
+      fs.existsSync(response.body.data.coverLetter.docx.absolutePath),
+    ).toBe(true);
     expect(typeof response.body.data.coverLetter.text).toBe("string");
+    expect(response.body.data.coverLetter.text).toContain(
+      "https://anishkrishnan.dev",
+    );
     expect(response.body.data.preview.resume.summary.length).toBeGreaterThan(0);
   });
 });

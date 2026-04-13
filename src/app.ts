@@ -37,7 +37,7 @@ export function createApp() {
   app.get("/", (_req, res) => {
     ok(res, {
       name: "BrokeBot API",
-      version: "phase-4.1",
+      version: "phase-4.2",
     });
   });
 
