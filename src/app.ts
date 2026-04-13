@@ -10,6 +10,7 @@ import {
   ok,
 } from "./lib/http.js";
 import { requestIdMiddleware } from "./lib/request-id.js";
+import { applicationPackageRouter } from "./routes/application-package.route.js";
 import { aiRouter } from "./routes/ai.route.js";
 import { dashboardRouter } from "./routes/dashboard.route.js";
 import { healthRouter } from "./routes/health.route.js";
@@ -36,7 +37,7 @@ export function createApp() {
   app.get("/", (_req, res) => {
     ok(res, {
       name: "BrokeBot API",
-      version: "phase-3.1",
+      version: "phase-4.1",
     });
   });
 
@@ -45,6 +46,7 @@ export function createApp() {
   app.use("/api/settings", settingsRouter);
   app.use("/api/resume", resumeRouter);
   app.use("/api/ai", aiRouter);
+  app.use("/api/application-package", applicationPackageRouter);
 
   app.use(jsonSyntaxErrorHandler);
   app.use(notFoundHandler);
