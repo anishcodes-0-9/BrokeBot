@@ -5,9 +5,9 @@ const resume = {
   basics: {
     fullName: "Anish Krishnan",
     email: "anish@example.com",
-    phone: "+91 9876543210",
-    location: "Kochi, India",
-    portfolio: "https://anishkrishnan.dev",
+    phone: "+91 7986402875",
+    location: "Chandigarh, India",
+    portfolio: "https://anish-krishnan-portfolio.vercel.app",
   },
   summary: "Base summary",
   skills: [
@@ -57,6 +57,8 @@ describe("application package quality", () => {
       description: "Need React, TypeScript, and UI execution.",
     });
 
-    expect(result.coverLetter).toContain("https://anishkrishnan.dev");
+    expect(result.coverLetter).toContain(
+      "https://anish-krishnan-portfolio.vercel.app",
+    );
   });
 });
